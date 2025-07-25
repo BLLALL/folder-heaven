@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\FileController;
 
 require __DIR__.'/auth.php';
 
+Route::resource('files', FileController::class);

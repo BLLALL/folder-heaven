@@ -11,7 +11,7 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -22,7 +22,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'avatar_url'
+        'avatar_url',
     ];
 
     /**
@@ -49,7 +49,7 @@ class User extends Authenticatable
     public function generateToken()
     {
         return $this->createToken(
-            'API token for ' . $this->email,
+            'API token for '.$this->email,
             ['*'],
             now()->addMonth()
         )->plainTextToken;

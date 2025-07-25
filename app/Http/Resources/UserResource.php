@@ -22,14 +22,16 @@ class UserResource extends JsonResource
             ],
             $this->mergeWhen(
                 isset($this->token),
-                fn() => ['token' => $this->token]
+                fn () => ['token' => $this->token]
             ),
         ];
     }
 
-    public static function makeWithToken(User $user, string $token) {
+    public static function makeWithToken(User $user, string $token)
+    {
         $resource = static::make($user);
         $resource->token = $token;
+
         return $resource;
     }
 }

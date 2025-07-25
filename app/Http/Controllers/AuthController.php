@@ -19,6 +19,7 @@ class AuthController extends Controller
         $user = User::create($request->validated());
 
         $resource = UserResource::makeWithToken($user, $user->generateToken());
+
         return $this->success('Registered!', $resource, 201);
     }
 
@@ -31,15 +32,17 @@ class AuthController extends Controller
         }
 
         $resource = UserResource::makeWithToken($user, $user->generateToken());
+
         return $this->ok('Authenticated!', $resource);
     }
-    
+
     public function logout()
     {
         Auth::user()->currentAccessToken()->delete();
+
         return response()->noContent();
     }
-    
+
     public function currentUser()
     {
         return UserResource::make(auth()->user());

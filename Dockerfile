@@ -14,11 +14,11 @@ RUN apt-get update -y && apt-get install -y \
 
 
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-WORKDIR /hireverse
-COPY . /hireverse
+WORKDIR /folder-heaven
+COPY . /folder-heaven
 
 # Create log directory
-RUN mkdir -p /hireverse/storage/logs
+RUN mkdir -p /folder-heaven/storage/logs
 RUN composer update --with-all-dependencies --no-scripts \
     && composer install --no-scripts \
     && composer dump-autoload -o

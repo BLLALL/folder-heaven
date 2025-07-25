@@ -1,0 +1,47 @@
+services:
+  folder-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laravel-app-container
+    ports:
+      - 81:8000
+    volumes:
+      - ./:/hireverse
+      - ./vendor:/hireverse/vendor
+    restart: always
+    networks:
+      - docker-network
+    depends_on:
+      - db
+      - redis
+  redis:
+    image: redis:alpine
+    container_name: redis-container
+    restart: always
+    ports:
+      - 6379:6379
+    networks:
+      - docker-network
+  db:
+    image: postgres
+    container_name: postgres-container
+    restart: always
+    shm_size: 128mb
+    ports:
+      - 5433:5432
+    volumes:
+      - /db-data:/postgres/data
+      - ./docker/postgres/postgres-hireverse-test.sql:/docker-entrypoint-initdb.d/postgres-hireverse-test.sql
+    environment:
+      - POSTGRES_DB=${DB_DATABASE}
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    networks:
+      - docker-network
+
+volumes:
+  db-data:
+networks:
+  docker-network:
+    driver: bridge

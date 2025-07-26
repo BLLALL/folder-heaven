@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Rules\ValidateFolder;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreFolderRequest extends FormRequest

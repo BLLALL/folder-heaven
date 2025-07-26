@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreFileRequest;
+use App\Http\Requests\UpdateFileRequest;
 use App\Http\Resources\FileResource;
 use App\Models\File;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class FileController extends Controller
 {
@@ -47,18 +49,31 @@ class FileController extends Controller
     {
         DB::beginTransaction();
         try {
+
             $data = $request->validated();
 
             if ($request->hasFile('file')) {
                 $uploadedFile = $request->file('file');
+                if ($data['parent_folder_id']) {
+                    $destination = File::find($data['parent_folder_id']);
 
-                $path = $uploadedFile->store('files/'.auth()->id());
-                $data['path'] = $path;
-                $data['size'] = $uploadedFile->getSize();
-                $data['mime_type'] = $uploadedFile->getMimeType();
-                $data['name'] = $data['name'] ?? $uploadedFile->getClientOriginalName();
+                    if (! $destination || ! $destination->is_folder) {
+                        return response()->json(['message' => 'parent must be a folder'], 422);
+                    }
+
+                    $this->authorize($destination);
+
+                    if ($destination->path != Str::beforeLast($data['path'], '/')) {
+                        return response()->json(['message' => 'path doesn\'t align with parent folder\'s path']);
+                    }
+                  
+                    $uploadedFile->storeAs(Str::beforeLast($data['path'], '/'), Str::afterLast($data['path'], '/'));
+                }
             }
 
+            $data['size'] = $uploadedFile->getSize();
+            $data['mime_type'] = $uploadedFile->getMimeType();
+            $data['name'] = $data['name'] ?? $uploadedFile->getClientOriginalName();
             $data['owner_id'] = auth()->id();
             $file = File::create($data);
 
@@ -78,5 +93,53 @@ class FileController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function show(File $file)
+    {
+        $this->authorize($file);
+
+        return new FileResource($file->load(['owner', 'children']));
+    }
+
+    public function update(UpdateFileRequest $request, File $file)
+    {
+        $this->authorize(folder: $file);
+
+        $data = $request->validated();
+
+        $file->update($data);
+
+        return new FileResource($file);
+    }
+
+    public function destroy(File $file)
+    {
+        $this->authorize($file);
+
+        if(!Storage::delete($file->path)) {
+            return response()->json('Failed to delete file with its current path');
+        }
+
+
+        $file->delete();
+
+
+        return response()->json(['message' => 'File deleted successfully']);
+
+    }
+
+    public function download(File $file)
+    {
+        $this->authorize($file);
+
+        if ($file->is_folder) {
+            return response()->json(['message' => 'Cannot download folders'], 422);
+        }
+
+        if (! $file->path || ! Storage::exists($file->path)) {
+            return response()->json(['message' => 'File not found'], 404);
+        }
+        return Storage::download($file->path, $file->name);
     }
 }

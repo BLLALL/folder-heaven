@@ -1,4 +1,3 @@
-// app/Http/Requests/UpdateFileRequest.php
 <?php
 
 namespace App\Http\Requests;

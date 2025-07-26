@@ -7,7 +7,6 @@ use App\Http\Resources\FileResource;
 use App\Models\File;
 use App\Models\Folder;
 use App\Traits\ApiResponses;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -20,6 +19,7 @@ class FolderController extends Controller
         $this->authorize($folder);
 
         $folder_contents = $folder->children()->get();
+
         return FileResource::collection($folder_contents);
     }
 
@@ -38,7 +38,7 @@ class FolderController extends Controller
         }
 
         $folder = Folder::create($attributes);
-        Storage::createDirectory(auth()->id() . $folder->path);
+        Storage::createDirectory(auth()->id().$folder->path);
 
         return $this->success('Folder created!', $attributes, 201);
     }
@@ -46,6 +46,7 @@ class FolderController extends Controller
     public function show(Folder $folder)
     {
         $this->authorize($folder);
+
         return FileResource::make($folder);
     }
 
@@ -53,17 +54,10 @@ class FolderController extends Controller
     {
         $this->authorize($folder);
 
-        Storage::deleteDirectory(auth()->id() . $folder->path);
+        Storage::deleteDirectory(auth()->id().$folder->path);
 
         File::whereLike('path', "{$folder->path}%", true)->delete();
 
         return $this->ok('Folder deleted!');
-    }
-
-    public function authorize($folder)
-    {
-        if ($folder->owner_id != auth()->id()) {
-            throw new AuthorizationException("You aren't authorized to access this folder!");
-        }
     }
 }

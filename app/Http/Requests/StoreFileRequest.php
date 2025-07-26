@@ -23,10 +23,8 @@ class StoreFileRequest extends FormRequest
     {
         return [
             'file' => ['required_without:is_folder', 'file', 'max:102400'], // max: 100MB
-            'name' => ['nullable', 'string', 'max:255'],
-            'parent_folder_id' => 'nullable|exists:files,id',
-            'is_folder' => 'nullable|boolean',
-
+            'parent_folder_id' => 'required|exists:files,id',
+            'path' => ['required', 'string', 'max:255', 'starts_with:/'],
         ];
     }
 

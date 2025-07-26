@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;
+use App\Models\Folder;
 use App\Models\User;
 use App\Traits\ApiResponses;
 use Illuminate\Support\Facades\Auth;
@@ -17,6 +18,7 @@ class AuthController extends Controller
     public function register(RegisterRequest $request)
     {
         $user = User::create($request->validated());
+        Folder::create(['owner_id' => $user->id, 'name'=>'', 'path' => '/']);
 
         $resource = UserResource::makeWithToken($user, $user->generateToken());
 

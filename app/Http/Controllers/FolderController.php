@@ -3,17 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreFolderRequest;
+use App\Http\Requests\UpdateFolderRequest;
 use App\Http\Resources\FileResource;
 use App\Models\File;
 use App\Models\Folder;
 use App\Traits\ApiResponses;
+use App\Traits\FolderHelpers;
+use Exception;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File as FacadesFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class FolderController extends Controller
 {
-    use ApiResponses;
+    use ApiResponses, FolderHelpers;
 
     public function index(Folder $folder)
     {
@@ -26,12 +31,16 @@ class FolderController extends Controller
     public function store(StoreFolderRequest $request)
     {
         $attributes = $request->validated();
-        $folder = Folder::findOrFail($attributes['parent_folder_id']);
+        $parent = Folder::find($attributes['parent_folder_id']);
 
-        $this->authorize($folder);
+        $this->authorize($parent);
 
         $attributes['owner_id'] = auth()->id();
         $attributes['name'] = Str::afterLast($attributes['path'], '/');
+
+        if ("{$parent->path}/" . $attributes['name'] != $attributes['path']) {
+            return $this->error("No match between parent folder and path!", 409);
+        }
 
         if (Folder::wherePath($attributes['path'])->exists()) {
             return $this->error('Folder already exists!', 409);
@@ -58,6 +67,36 @@ class FolderController extends Controller
         File::whereLike('path', "{$folder->path}%", true)->delete();
 
         return $this->ok('Folder deleted!');
+    }
+
+    public function update(Folder $folder, UpdateFolderRequest $request)
+    {
+        $this->authorize($folder);
+        
+        $attributes = $request->validated();
+
+        $user_id = auth()->id();
+
+        if (Str::beforeLast($attributes['path'], '/') == Str::beforeLast($folder->path, '/') && Storage::directoryMissing($user_id . $attributes['path'])) {
+            $attributes['name'] = Str::afterLast($attributes['path'], '/'); // rename
+        } else {
+            $attributes['name'] = $folder->name; // move
+            if (Folder::findOrFail($attributes['parent_folder_id'])->path != $attributes['path']) {
+                return $this->error("No match between parent folder and path!", 409);
+            }
+            $attributes['path'] .= "/{$folder->name}";
+
+        }
+
+        $source = Storage::path($user_id . $folder->path);
+        $destination = Storage::path($user_id . $attributes['path']);
+
+        if ($this->moveFolder($source, $destination)) {
+            $folder->update($attributes);
+            return $this->ok('Folder moved!');
+        }
+        
+        return $this->error("Couldn't move folder!", 500);
     }
 
     public function authorize($folder)

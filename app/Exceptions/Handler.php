@@ -15,6 +15,7 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
+use Throwable;
 
 class Handler
 {
@@ -61,7 +62,7 @@ class Handler
         return $this->error('Database error occurred', 500);
     }
 
-    private function handleServerError(Exception $exception)
+    private function handleServerError(Throwable $exception)
     {
         if (config('app.debug') === false) {
             return $this->error('Server Error', 500);

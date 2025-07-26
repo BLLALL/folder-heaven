@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreFileRequest;
+use App\Http\Resources\FileResource;
 use App\Models\File;
 use Illuminate\Http\Request;
-use App\Http\Resources\FileResource;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class FileController extends Controller
 {
@@ -38,5 +41,42 @@ class FileController extends Controller
 
         return FileResource::collection($files);
 
+    }
+
+    public function store(StoreFileRequest $request)
+    {
+        DB::beginTransaction();
+        try {
+            $data = $request->validated();
+
+            if ($request->hasFile('file')) {
+                $uploadedFile = $request->file('file');
+
+                $path = $uploadedFile->store('files/'.auth()->id());
+                $data['path'] = $path;
+                $data['size'] = $uploadedFile->getSize();
+                $data['mime_type'] = $uploadedFile->getMimeType();
+                $data['name'] = $data['name'] ?? $uploadedFile->getClientOriginalName();
+            }
+
+            $data['owner_id'] = auth()->id();
+            $file = File::create($data);
+
+            DB::commit();
+
+            return new FileResource($file->load('owner'));
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            if (isset($path) && Storage::exists($path)) {
+                Storage::delete($path);
+            }
+
+            return response()->json([
+                'message' => 'Failed to create file',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

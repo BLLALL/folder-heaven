@@ -4,8 +4,6 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: laravel-app-container
-    ports:
-      - 81:8000
     volumes:
       - ./:/hireverse
       - ./vendor:/hireverse/vendor
@@ -15,6 +13,18 @@ services:
     depends_on:
       - db
       - redis
+  nginx:
+    image: nginx:stable-alpine
+    ports:
+      - 81:80
+      - 443:443
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./ssl/:/etc/nginx/ssl:ro
+    networks:
+      - docker-network
+    depends_on:
+      - folder-app
   redis:
     image: redis:alpine
     container_name: redis-container

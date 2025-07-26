@@ -6,11 +6,9 @@ use Illuminate\Support\Facades\Route;
 
 require __DIR__.'/auth.php';
 
-
-
 Route::middleware('auth:sanctum')->group(function () {
-    Route::resource('files', FileController::class);
-
+    Route::ApiResource('files', FileController::class);
+    Route::get('files/download/{file}',[ FileController::class, 'download']);
     Route::post('folders', [FolderController::class, 'store']);
     Route::get('folders/{folder}/contents', [FolderController::class, 'index']);
     Route::get('folders/{folder}', [FolderController::class, 'show']);

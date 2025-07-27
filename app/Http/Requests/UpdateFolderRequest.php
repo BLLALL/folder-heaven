@@ -13,5 +13,4 @@ class UpdateFolderRequest extends FormRequest
             'parent_folder_id' => 'required|integer',
         ];
     }
-
 }

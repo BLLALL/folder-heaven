@@ -9,8 +9,8 @@ trait FolderHelpers
         $command = PHP_OS_FAMILY === 'Windows' ? 'move' : 'mv';
 
         $result = null;
-        exec($command . ' ' . escapeshellarg($source) . ' ' . escapeshellarg($destination), $output, $result);
+        exec($command.' '.escapeshellarg($source).' '.escapeshellarg($destination), $output, $result);
 
-        return !$result;
+        return ! $result;
     }
 }

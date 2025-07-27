@@ -18,7 +18,7 @@ class AuthController extends Controller
     public function register(RegisterRequest $request)
     {
         $user = User::create($request->validated());
-        Folder::create(['owner_id' => $user->id, 'name'=>'', 'path' => '/']);
+        $folder = Folder::create(['owner_id' => $user->id, 'name' => '', 'path' => '/']);
 
         $resource = UserResource::makeWithToken($user, $user->generateToken());
 

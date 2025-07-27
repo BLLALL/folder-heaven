@@ -19,12 +19,21 @@ class StoreFileRequest extends FormRequest
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
+    // public function rules(): array
+    // {
+    //     return [
+    //         'file' => ['required_without:is_folder', 'file', 'max:102400'], // max: 100MB
+    //         'parent_folder_id' => 'required|exists:files,id',
+    //         'path' => ['required', 'string', 'max:255', 'starts_with:/'],
+    //     ];
+    // }
+
     public function rules(): array
     {
         return [
             'file' => ['required_without:is_folder', 'file', 'max:102400'], // max: 100MB
             'parent_folder_id' => 'required|exists:files,id',
-            'path' => ['required', 'string', 'max:255', 'starts_with:/'],
+            'name' => ['required', 'string', 'max:255'],
         ];
     }
 

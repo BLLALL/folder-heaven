@@ -44,4 +44,14 @@ class File extends Model
     {
         return $this->hasMany(File::class, 'parent_folder_id');
     }
+
+    public static function storeFile($parentFolderPath, $data)
+    {
+        $data['file']->storeAs((auth()->id()).'/'.$parentFolderPath, $data['name']);
+    }
+
+    public static function getFileRealPath($path)
+    {
+        return auth()->id().$path;
+    }
 }

@@ -15,15 +15,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->api(prepend: [
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-        ]);
+//        $middleware->api(prepend: [
+//            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+//        ]);
 
         $middleware->alias([
             'api_guest' => ApiGuest::class,
         ]);
 
-        $middleware->trustProxies(at: ['172.18.0.5']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->renderable(function (\Throwable $exception, Request $request) {

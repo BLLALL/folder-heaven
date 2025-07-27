@@ -177,7 +177,7 @@ class FileController extends Controller
                 $this->authorize($newParentFolder);
 
                 $oldPath = $file->path;
-                
+
                 if ($file->parent_folder_id !== $newParentFolder->id) {
                     $newPath = $newParentFolder->path.'/'.$file->name;
                     if (File::wherePath($newPath)->exists()) {
@@ -216,7 +216,6 @@ class FileController extends Controller
 
             if (Storage::exists(File::getFileRealPath($newPath))) {
                 Storage::move(File::getFileRealPath($newPath), File::getFileRealPath($oldPath));
-
             }
 
             return response()->json([

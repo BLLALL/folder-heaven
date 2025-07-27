@@ -27,25 +27,45 @@ class FolderController extends Controller
 
     public function store(StoreFolderRequest $request)
     {
-        $attributes = $request->validated();
-        $parent = Folder::find($attributes['parent_folder_id']);
+        DB::beginTransaction();
+        
+        try {
+            $attributes = $request->validated();
+            $parent = File::find($attributes['parent_folder_id']);
 
-        $this->authorize($parent);
+            if (!$parent || !$parent->is_folder) {
+                return $this->error(['message' => 'Parent must be a folder'], 422);
+            }
 
-        $attributes['owner_id'] = auth()->id();
-        $attributes['name'] = Str::afterLast($attributes['path'], '/');
-        if ("{$parent->path}/".$attributes['name'] != $attributes['path']) {
-            return $this->error('No match between parent folder and path!', 409);
+            $this->authorize($parent);
+
+            $attributes['path'] = $parent->path . '/' . $attributes['name'];
+            $attributes['owner_id'] = auth()->id();
+            $attributes['is_folder'] = true;
+
+            if (File::wherePath($attributes['path'])->exists()) {
+                return $this->error('Folder already exists!', 409);
+            }
+
+            $folder = File::create($attributes);
+            Storage::createDirectory(auth()->id() . $folder->path);
+
+            DB::commit();
+
+            return new FileResource($folder);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            if (isset($attributes['path']) && Storage::exists(auth()->id() . $attributes['path'])) {
+                Storage::deleteDirectory(auth()->id() . $attributes['path']);
+            }
+
+            return response()->json([
+                'message' => 'Failed to create folder',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        if (Folder::wherePath($attributes['path'])->exists()) {
-            return $this->error('Folder already exists!', 409);
-        }
-
-        $folder = Folder::create($attributes);
-        Storage::createDirectory(auth()->id().$folder->path);
-
-        return $this->success('Folder created!', $attributes, 201);
     }
 
     public function show(Folder $folder)
@@ -70,30 +90,81 @@ class FolderController extends Controller
     {
         $this->authorize($folder);
 
-        $attributes = $request->validated();
+        DB::beginTransaction();
 
-        $user_id = auth()->id();
+        try {
+            $attributes = $request->validated();
+            $oldPath = $folder->path;
 
-        if (Str::beforeLast($attributes['path'], '/') == Str::beforeLast($folder->path, '/') && Storage::directoryMissing($user_id.$attributes['path'])) {
-            $attributes['name'] = Str::afterLast($attributes['path'], '/'); // rename
-        } else {
-            $attributes['name'] = $folder->name; // move
-            if (Folder::findOrFail($attributes['parent_folder_id'])->path != $attributes['path']) {
-                return $this->error('No match between parent folder and path!', 409);
+            if ($request->has('parent_folder_id') && $folder->parent_folder_id !== $request->parent_folder_id) {
+                $newParentFolder = File::find($request->parent_folder_id);
+
+                if (!$newParentFolder || !$newParentFolder->is_folder) {
+                    return $this->error(['message' => 'The destination must be a folder'], 422);
+                }
+
+                $this->authorize($newParentFolder);
+
+                $newPath = $newParentFolder->path . '/' . $folder->name;
+                
+                if (File::wherePath($newPath)->exists()) {
+                    return $this->error('A folder with this name already exists in the destination folder.', 409);
+                }
+
+                $folder->parent_folder_id = $newParentFolder->id;
+                $folder->path = $newPath;
             }
-            $attributes['path'] .= "/{$folder->name}";
 
+            // Handle name change (rename)
+            if ($request->has('name') && $folder->name !== $request->name) {
+                $newName = $request->name;
+                $newPath = dirname($folder->path) . '/' . $newName;
+
+                if (File::wherePath($newPath)->exists()) {
+                    return $this->error('A folder with this name already exists.', 409);
+                }
+
+                $folder->name = $newName;
+                $folder->path = $newPath;
+            }
+
+            if ($oldPath !== $folder->path) {
+                $source = Storage::path(auth()->id() . $oldPath);
+                $destination = Storage::path(auth()->id() . $folder->path);
+
+                if (!$this->moveFolder($source, $destination)) {
+                    return $this->error("Couldn't move folder!", 500);
+                }
+
+            }
+            $folder->save();
+            DB::commit();
+
+            return new FileResource($folder);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            if (isset($oldPath) && $oldPath !== $folder->path) {
+                $source = Storage::path(auth()->id() . $folder->path);
+                $destination = Storage::path(auth()->id() . $oldPath);
+                $this->moveFolder($source, $destination);
+            }
+
+            return response()->json([
+                'message' => 'Failed to update folder',
+                'error' => $e->getMessage(),
+            ], 500);
         }
+    }
 
-        $source = Storage::path($user_id.$folder->path);
-        $destination = Storage::path($user_id.$attributes['path']);
-
-        if ($this->moveFolder($source, $destination)) {
-            $folder->update($attributes);
-
-            return $this->ok('Folder moved!');
+    private function updateChildrenPaths($oldParentPath, $newParentPath)
+    {
+        $children = File::where('path', 'like', $oldParentPath . '/%')->get();
+        
+        foreach ($children as $child) {
+            $child->path = str_replace($oldParentPath, $newParentPath, $child->path);
+            $child->save();
         }
-
-        return $this->error("Couldn't move folder!", 500);
     }
 }

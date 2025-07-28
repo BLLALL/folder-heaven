@@ -9,6 +9,7 @@ use App\Models\File;
 use App\Models\Folder;
 use App\Traits\ApiResponses;
 use App\Traits\FolderHelpers;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -39,7 +40,7 @@ class FolderController extends Controller
 
             $this->authorize($parent);
 
-            $attributes['path'] = $parent->path . '/' . $attributes['name'];
+            $attributes['path'] = str_replace('//', '/', $parent->path . '/' . $attributes['name']);
             $attributes['owner_id'] = auth()->id();
             $attributes['is_folder'] = true;
 
@@ -105,7 +106,7 @@ class FolderController extends Controller
 
                 $this->authorize($newParentFolder);
 
-                $newPath = $newParentFolder->path . '/' . $folder->name;
+                $newPath = str_replace('//', '/', $newParentFolder->path . '/' . $folder->name);
                 
                 if (File::wherePath($newPath)->exists()) {
                     return $this->error('A folder with this name already exists in the destination folder.', 409);
@@ -118,7 +119,7 @@ class FolderController extends Controller
             // Handle name change (rename)
             if ($request->has('name') && $folder->name !== $request->name) {
                 $newName = $request->name;
-                $newPath = dirname($folder->path) . '/' . $newName;
+                $newPath = str_replace('//', '/', dirname($folder->path) . '/' . $newName);
 
                 if (File::wherePath($newPath)->exists()) {
                     return $this->error('A folder with this name already exists.', 409);

@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Traits\ApiResponses;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
 {
@@ -19,10 +20,11 @@ class AuthController extends Controller
     {
         $user = User::create($request->validated());
         $folder = Folder::create(['owner_id' => $user->id, 'name' => '', 'path' => '/']);
+        Storage::createDirectory($user->id);
 
         $resource = UserResource::makeWithToken($user, $user->generateToken());
 
-        return $this->success('Registered!', $resource, 201);
+        return $this->success('Registered!', ['user' => $resource, 'root_id' => $folder->id], 201);
     }
 
     public function login(LoginRequest $request)

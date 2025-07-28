@@ -9,7 +9,7 @@ class StoreFolderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'path' => 'required|string|max:255|starts_with:/',
+            'name' => 'required|string|max:255',
             'parent_folder_id' => 'required|integer',
         ];
     }
